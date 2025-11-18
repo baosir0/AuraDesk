@@ -1,0 +1,17 @@
+# Dependencies
+/node_modules
+/package-lock.json  # 除非您是严格的 monorepo，否则通常忽略
+/render/node_modules
+/service/node_modules
+/test/node_modules
+# Build/Dist/Temp folders
+/dist
+/dist-tauri
+/target  # Rust/Tauri 的构建目录
+
+# IDE files (VS Code)
+.vscode/
+
+# Logs
+npm-debug.log*
+yarn-error.log
