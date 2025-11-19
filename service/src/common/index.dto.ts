@@ -1,7 +1,7 @@
 import { PostMessageble } from "../hook/adapter.dto";
-import { MCPClient } from "../mcp/client.service";
+import { McpClient } from "../mcp/client.service";
 
-export type RequestClientType = MCPClient | undefined;
+export type RequestClientType = McpClient | undefined;
 
 export interface RequestData {
     clientId?: string;

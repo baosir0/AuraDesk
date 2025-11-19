@@ -7,7 +7,7 @@ import { deterministicUUID, getCommandFileExt, getCWD } from "./utils";
 
 export const clientMap: Map<string, RequestClientType> = new Map();
 
-export function getClient(clientId: string | undefined): McpClient{
+export function getClient(clientId: string | undefined): RequestClientType{
     const client = clientMap.get(clientId || '')
     return client
 }
@@ -39,17 +39,35 @@ export async function connectService(options: McpOptions, webview: PostMessagebl
 }
 
 export async function disconnectService(data: any, webview: PostMessageble): Promise<RestfulResponse>{
-    const connectResult = {
+    const {clientId} = data
+    if (!clientId) {
+        return {
+            code: 500,
+            msg: '需要clientId'
+        }
+    }
+
+    const client = clientMap.get(clientId)
+    if (!client) {
+        return {
+            code: 500,
+            msg: 'client未连接'
+        }
+    }
+
+    try{
+        client.disconnect()
+        clientMap.delete(clientId)
+        return {
             code: 200,
-            msg: {
-                status: 'success',
-                clientId: uuid,
-                reuseConntion,
-                name: versionInfo?.name || 'unknown',
-                version: versionInfo?.version || 'unknown'
-            }
-        };
-    return connectResult
+            msg: '关闭连接成功'
+        }
+    }catch(error) {
+        return {
+            code: 500,
+            msg: '关闭连接失败'
+        }
+    }
 }
 
 async function preprocessCommand(option: McpOptions, webview?: PostMessageble) {
@@ -63,31 +81,25 @@ async function preprocessCommand(option: McpOptions, webview?: PostMessageble) {
         });
     }
 
-    if (option.cwd && option.cwd.startsWith('~/')) {
-        option.cwd = option.cwd.replace('~', process.env.HOME || '');
-    }
+    // if (option.cwd && option.cwd.startsWith('~/')) {
+    //     option.cwd = option.cwd.replace('~', process.env.HOME || '');
+    // }
 
-    const cwd = getCWD(option);
-    if (!cwd) {
-        return;
-    }
+    // const cwd = getCWD(option);
+    // if (!cwd) {
+    //     return;
+    // }
 
-    const ext = getCommandFileExt(option);
-    if (!ext) {
-        return;
-    }
-
-    // STDIO 模式下，对不同类型的项目进行额外支持
-    // uv：如果没有初始化，则进行 uv sync，将 mcp 设置为虚拟环境的
-    // npm：如果没有初始化，则进行 npm init，将 mcp 设置为虚拟环境
-    // go：如果没有初始化，则进行 go mod init
-
-    switch (ext) {
-        case '.py':
-            await initUv(option, cwd, webview);
-            break;
-        default:
-            break;
-    }
+    // const ext = getCommandFileExt(option);
+    // if (!ext) {
+    //     return;
+    // }
+    // switch (ext) {
+    //     case '.py':
+    //         await initUv(option, cwd, webview);
+    //         break;
+    //     default:
+    //         break;
+    // }
 }
 

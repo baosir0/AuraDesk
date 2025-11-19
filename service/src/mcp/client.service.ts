@@ -2,6 +2,7 @@ import { PostMessageble } from "src/hook/adapter.dto";
 import { McpOptions, ToolCallResponse } from "./client.dto";
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { getClient } from "./connect.service";
 
 
 export class McpClient {
@@ -40,7 +41,7 @@ export class McpClient {
     }
 
     getServerVersion() {
-
+        return this.client.getServerVersion()
     }
 
     // 列出所有工具

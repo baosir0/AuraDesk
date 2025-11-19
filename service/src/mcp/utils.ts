@@ -48,57 +48,57 @@ export function getCommandFileExt(option: McpOptions) {
     return undefined;
 }
 
-async function initUv(option: McpOptions, cwd: string, webview?: PostMessageble) {
-    let projectDir = cwd;
+// async function initUv(option: McpOptions, cwd: string, webview?: PostMessageble) {
+//     let projectDir = cwd;
 
-    while (projectDir !== path.dirname(projectDir)) {
-        if (fs.readdirSync(projectDir).includes('pyproject.toml')) {
-            break;
-        }
-        projectDir = path.dirname(projectDir);
-    }
+//     while (projectDir !== path.dirname(projectDir)) {
+//         if (fs.readdirSync(projectDir).includes('pyproject.toml')) {
+//             break;
+//         }
+//         projectDir = path.dirname(projectDir);
+//     }
 
-    const venv = path.join(projectDir, '.venv');
+//     const venv = path.join(projectDir, '.venv');
 
-    // judge by OS
-    const mcpCli = os.platform() === 'win32' ?
-        path.join(venv, 'Scripts', 'mcp.exe') :
-        path.join(venv, 'bin', 'mcp');
+//     // judge by OS
+//     const mcpCli = os.platform() === 'win32' ?
+//         path.join(venv, 'Scripts', 'mcp.exe') :
+//         path.join(venv, 'bin', 'mcp');
 
-    if (option.command === 'mcp') {
-        option.command = mcpCli;
-        // option.cwd = projectDir;
-    }
+//     if (option.command === 'mcp') {
+//         option.command = mcpCli;
+//         // option.cwd = projectDir;
+//     }
 
-    if (fs.existsSync(mcpCli)) {
-        return '';
-    }
+//     if (fs.existsSync(mcpCli)) {
+//         return '';
+//     }
 
-    const syncOutput = await collectAllOutputExec('uv sync', projectDir);
+//     const syncOutput = await collectAllOutputExec('uv sync', projectDir);
 
-    webview?.postMessage({
-        command: 'connect/log',
-        data: {
-            code: syncOutput.toLowerCase().startsWith('error') ? 501 : 200,
-            msg: {
-                title: 'uv sync',
-                message: syncOutput
-            }
-        }
-    });
+//     webview?.postMessage({
+//         command: 'connect/log',
+//         data: {
+//             code: syncOutput.toLowerCase().startsWith('error') ? 501 : 200,
+//             msg: {
+//                 title: 'uv sync',
+//                 message: syncOutput
+//             }
+//         }
+//     });
 
-    const addOutput = await collectAllOutputExec('uv add mcp "mcp[cli]"', projectDir);
-    webview?.postMessage({
-        command: 'connect/log',
-        data: {
-            code: addOutput.toLowerCase().startsWith('error') ? 501 : 200,
-            msg: {
-                title: 'uv add mcp "mcp[cli]"',
-                message: addOutput
-            }
-        }
-    });
-}
+//     const addOutput = await collectAllOutputExec('uv add mcp "mcp[cli]"', projectDir);
+//     webview?.postMessage({
+//         command: 'connect/log',
+//         data: {
+//             code: addOutput.toLowerCase().startsWith('error') ? 501 : 200,
+//             msg: {
+//                 title: 'uv add mcp "mcp[cli]"',
+//                 message: addOutput
+//             }
+//         }
+//     });
+// }
 
 
 export async function deterministicUUID(input: string) {
