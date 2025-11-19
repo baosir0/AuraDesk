@@ -5,7 +5,7 @@
 /service/node_modules
 /test/node_modules
 # Build/Dist/Temp folders
-/dist
+/render/dist
 /dist-tauri
 /target  # Rust/Tauri 的构建目录
 
