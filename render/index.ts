@@ -17,7 +17,7 @@ if (!ANTHROPIC_API_KEY) {
   throw new Error("ANTHROPIC_API_KEY is not set");
 }
 
-class MCPClient {
+class McpClient {
   private mcp: Client;
   private anthropic: Anthropic;
   private transport: StdioClientTransport | null = null;
@@ -172,4 +172,4 @@ class MCPClient {
     await this.mcp.close();
   }
 }
-export default MCPClient
+export default McpClient

@@ -1,7 +1,8 @@
-import { Controller } from "src/common";
-import { RequestData } from "src/common/index.dto";
-import { PostMessageble } from "src/hook/adapter.dto";
 import { streamingChatCompletion } from "./llm.service";
+import { Controller } from '../common/index';
+import { RequestData } from '../common/index.dto';
+import { PostMessageble } from '../hook/adapter.dto';
+
 
 export class LlmController {
 
@@ -10,7 +11,7 @@ export class LlmController {
 
         try {
             await streamingChatCompletion(data, webview);
-        } catch (error) {            
+        } catch (error) {
             webview.postMessage({
                 command: 'llm/chat/completions/error',
                 data: {

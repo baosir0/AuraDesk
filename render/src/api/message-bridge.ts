@@ -1,120 +1,81 @@
-/**
- * PostMessageble 接口: 定义桥接的通信接口，在您的实际项目中可能对应 WebWorker 或 WebView 的 postMessage。
- * 这里简化为 WebSocket 的 send 方法。
- */
-interface PostMessageble {
-    send(data: string): void;
+import { isReactive } from 'vue';
+import { v4 as uuidv4 } from 'uuid';
+
+
+
+
+
+export interface CommandMessage {
+	command: string;
+	data?: unknown;
+	callbackId?: string;
 }
 
-/**
- * RequestData 接口: 定义发送给后端的请求数据结构。
- */
-interface RequestData {
-    command: string;
-    // ... 其他请求数据
-    [key: string]: any; 
+export interface RestFulResponse<T = any> {
+	_id?: string
+	code: number;
+	msg: T;
+
+	error?: string;
 }
 
-/**
- * ResponseData 接口: 定义从后端接收的响应数据结构。
- * 注意：通常后端响应会包含一个 _id 用于匹配请求。
- */
-interface ResponseData {
-    _id: string;
-    command: string; // 可能是原始命令 + /done
-    code: number;
-    msg: any;
+export type CommandHandler = (data: any) => void;
+
+interface AddCommandListenerOption {
+	once: boolean
 }
 
-/**
- * WebSocketBridge 类：实现前端到后端的 WebSocket 桥接通信。
- */
+export interface ICommandRequestData {
+	clientId?: string;
+	[key: string]: any;
+}
+
 export class MessageBridge {
 	private ws: WebSocket | null = null;
 	private handlers = new Map<string, Set<CommandHandler>>();
 	private isConnected: Promise<boolean> | null = null;
+	private wsUrl: string;
 
-	constructor(
-		private setupSignature: any
-	) {
-
-		const platform = getPlatform();
-
-		switch (platform) {
-			case 'vscode':
-				this.setupVsCodeListener();
-				pinkLog('[PLATFORM] Vscode');
-				break;
-
-			case 'electron':
-				this.setupElectronListener();
-				pinkLog('[PLATFORM] Electron');
-				break;
-			
-			case 'nodejs':
-				this.setupNodejsListener();
-				pinkLog('[PLATFORM] NodeJS');
-				break;
-			
-			case 'web':
-				this.setupWebSocket();
-				pinkLog('[PLATFORM] Web');
-				break;
+	constructor(setupSignature: string) {
+		if (typeof setupSignature !== 'string') {
+			throw new Error('MessageBridge requires a WebSocket URL string.');
 		}
+		this.wsUrl = setupSignature;
+		this.setupWebSocket();
 	}
 
-	// VS Code 环境监听
-	private setupVsCodeListener() {
-		const vscode = acquireVsCodeApi();
+	public setupWebSocket() {
+		console.log(`Connecting to WebSocket: ${this.wsUrl}`);
 
-		window.addEventListener('message', (event: MessageEvent<VSCodeMessage>) => {
-			this.dispatchMessage(event.data);
-		});
-
-		this.postMessage = (message) => vscode.postMessage(message);
-	}
-
-	// WebSocket 环境连接
-	public setupWebSocket(setupSignature?: string) {
-		const wsUrl = setupSignature || this.setupSignature;
-
-		if (typeof wsUrl !== 'string') {
-			throw new Error('setupSignature must be a string');
-		}
-		
-		console.log(wsUrl);
-		
-		this.ws = new WebSocket(wsUrl);
+		this.ws = new WebSocket(this.wsUrl);
 		const ws = this.ws;
 
 		this.isConnected = new Promise<boolean>((resolve, reject) => {
 			ws.onopen = () => {
+				console.log('WebSocket connection opened.');
 				resolve(true);
 			};
 
 			ws.onmessage = (event) => {
-				try {				
-					const message = JSON.parse(event.data) as VSCodeMessage;
+				try {
+					const message = JSON.parse(event.data) as CommandMessage;
 					this.dispatchMessage(message);
 				} catch (err) {
 					console.error('Message parse error:', err);
-					console.log(event);
 				}
 			};
-	
+
 			ws.onerror = (err) => {
-				redLog('WebSocket error:');				
-				resolve(false);
+				console.error('WebSocket error occurred:', err);
+				resolve(false); 
 			};
-	
+
 			ws.onclose = () => {
-				redLog('WebSocket connection closed');
+				console.warn('WebSocket connection closed.');
 				resolve(false);
 			};
-	
 			this.postMessage = (message) => {
 				if (this.ws?.readyState === WebSocket.OPEN) {
-					console.log('send', message);
 					this.ws.send(JSON.stringify(message));
 				}
 			};
@@ -123,75 +84,31 @@ export class MessageBridge {
 		return this.isConnected;
 	}
 
-	public async awaitForWebsocket() {
-		
+	public async awaitForConnection() {
 		if (this.isConnected) {
 			return await this.isConnected;
 		}
 		return false;
 	}
 
-	private setupElectronListener() {
-		electronApi.onReply((event: MessageEvent<VSCodeMessage>) => {
-			console.log(event);
-			this.dispatchMessage(event.data);
-		});
-
-		this.postMessage = (message) => {
-			console.log(message);
-			electronApi.sendToMain(message);
-		};		
-	}
-
-	private setupNodejsListener() {
-		
-		const emitter = this.setupSignature;
-		if (!emitter.on || !emitter.emit) {
-			return;
-		}
-
-		emitter.on('message/service', (message: VSCodeMessage) => {
-			this.dispatchMessage(message);
-		});
-
-		this.postMessage = (message) => {
-			emitter.emit('message/renderer', message);
-		};
-	}
-
 	/**
 	 * @description 对 message 发起调度，根据 command 类型获取调取器
-	 * @param message 
+	 * @param message 
 	 */
-	private dispatchMessage(message: VSCodeMessage) {
+	private dispatchMessage(message: CommandMessage) {
 		const command = message.command;
 		const data = message.data;
 
 		const handlers = this.handlers.get(command) || new Set();
-        handlers.forEach(handler => handler(data));
+		handlers.forEach(handler => handler(data));
 	}
 
-	public postMessage(message: VSCodeMessage) {
-		throw new Error('PostMessage not initialized');
+	public postMessage(message: CommandMessage) {
+		throw new Error('PostMessage not initialized. WebSocket not yet open.');
 	}
 
 	/**
 	 * @description 注册一个命令的执行器（支持一次性或持久监听）
-	 * @example
-	 * // 基本用法（持久监听）
-	 * const removeListener = bridge.addCommandListener('message', (data) => {
-	 *   console.log('收到消息:', data.msg.text);
-	 * }, { once: false });
-	 * 
-	 * // 稍后取消监听
-	 * removeListener();
-	 * 
-	 * @example
-	 * // 一次性监听（自动移除）
-	 * bridge.addCommandListener('connect', (data) => {
-	 *   const { code, msg } = data;
-	 *   console.log(`连接结果: ${code === 200 ? '成功' : '失败'}`);
-	 * }, { once: true });
 	 */
 	public addCommandListener(
 		command: string,
@@ -201,7 +118,6 @@ export class MessageBridge {
 		if (!this.handlers.has(command)) {
 			this.handlers.set(command, new Set<CommandHandler>());
 		}
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const commandHandlers = this.handlers.get(command)!;
 
 		const wrapperCommandHandler = option.once ? (data: any) => {
@@ -213,14 +129,15 @@ export class MessageBridge {
 		return () => commandHandlers.delete(wrapperCommandHandler);
 	}
 
+
 	private deserializeReactiveData(data: any) {
-		if (isReactive(data)) {
+		if (typeof isReactive === 'function' && isReactive(data)) {
 			return JSON.parse(JSON.stringify(data));
 		}
 
-		// 只对第一层进行遍历
+
 		for (const key in data) {
-			if (isReactive(data[key])) {
+			if (typeof isReactive === 'function' && isReactive(data[key])) {
 				data[key] = JSON.parse(JSON.stringify(data[key]));
 			}
 		}
@@ -229,32 +146,44 @@ export class MessageBridge {
 	}
 
 	/**
-	 * @description do as axios does
-	 * @param command 
-	 * @param data 
-	 * @returns 
+	 * @description 
+	 * @param command 
+	 * @param data 
+	 * @returns Promise<RestFulResponse<T>>
 	 */
-	public commandRequest<T = any>(command: string, data?: ICommandRequestData): Promise<RestFulResponse<T>>  {
-        const _id = uuidv4();
-		
-        return new Promise<RestFulResponse>((resolve, reject) => {
-			const handler = this.addCommandListener(command, (data) => {
-                if (data._id === undefined) {
-                    console.warn('detect data without id, data: ' + JSON.stringify(data, null, 2));
-                }
+	public commandRequest<T = any>(command: string, data?: ICommandRequestData): Promise<RestFulResponse<T>> {
+		const _id = uuidv4();
 
-                if (data._id === _id) {
-                    handler();
-    				resolve(data as RestFulResponse);
-                }
+		return new Promise<RestFulResponse<T>>((resolve, reject) => {
+			if (this.ws?.readyState !== WebSocket.OPEN) {
+				return reject({ code: 503, error: 'WebSocket not connected or open.' });
+			}
+
+			const handler = this.addCommandListener(command, (data: RestFulResponse) => {
+
+				if (data._id === _id) {
+					handler();
+
+					if (data.code >= 200 && data.code < 300) {
+						resolve(data as RestFulResponse<T>);
+					} else {
+
+						const errorMsg = data.error || `Command failed with code ${data.code}`;
+						reject({ code: data.code, error: errorMsg, response: data });
+					}
+				} else if (data._id === undefined) {
+
+					console.warn('Received message without ID, treating as broadcast or incomplete: ' + JSON.stringify(data, null, 2));
+				}
 			}, { once: false });
 
+
 			this.postMessage({
-                command,
+				command,
 				data: this.deserializeReactiveData({
-                    _id,
-                    ...data
-                })
+					_id,
+					...data
+				})
 			});
 		});
 	}
@@ -265,18 +194,18 @@ export class MessageBridge {
 	}
 }
 
-
-// 单例实例
 let messageBridge: MessageBridge;
 
-export function createMessageBridge(setupSignature: any) {
+
+export function createMessageBridge(setupSignature: string) {
 	messageBridge = new MessageBridge(setupSignature);
+	return messageBridge;
 }
 
-// 向外暴露一个独立函数，保证 MessageBridge 是单例的
+
 export function useMessageBridge() {
-	if (!messageBridge) {		
-		messageBridge = new MessageBridge(import.meta.env.VITE_WEBSOCKET_URL);
+	if (!messageBridge) {
+		messageBridge = new MessageBridge(process.env.VUE_APP_WEBSOCKET_URL as string);
 	}
 	const bridge = messageBridge;
 

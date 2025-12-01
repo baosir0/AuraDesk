@@ -22,7 +22,7 @@ export class ClientController{
     }
 
     @Controller('tools/call')
-    async calltool(data: RequestData, webview: PostMessageble){
+    async callTool(data: RequestData, webview: PostMessageble){
         const client = getClient(data.clientId);
         if (!client) {
             return {
@@ -42,6 +42,23 @@ export class ClientController{
             code: 200,
             msg: toolResult
         };
+    }
+
+    @Controller('tools/list')
+    async listTools(data: RequestData, webview: PostMessageble) {
+        const client = getClient(data.clientId)
+        if (!client){
+            return {
+                code: 501,
+                msg: "客户端未连接"
+            }
+        }
+        const toolsList = await client.listTools()
+
+        return {
+            code: 200,
+            msg: toolsList
+        }
     }
 
 
