@@ -59,10 +59,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick} from 'vue'
 import { Promotion } from '@element-plus/icons-vue'
 import { useMessageStore } from '@/store/MessageStore'
 import { formatMessage } from '@/utils'
+
+// import { watch } from 'vue'
 
 const messageStore = useMessageStore()
 
@@ -93,9 +95,9 @@ const handleSend = (event) => {
   sendMessage()
 }
 
-
 onMounted(() => {
   scrollToBottom()
+  messageStore.connectToServer()
 })
 </script>
 

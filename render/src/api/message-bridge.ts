@@ -151,8 +151,9 @@ export class MessageBridge {
 	 * @param data 
 	 * @returns Promise<RestFulResponse<T>>
 	 */
-	public commandRequest<T = any>(command: string, data?: ICommandRequestData): Promise<RestFulResponse<T>> {
+	public async commandRequest<T = any>(command: string, data?: ICommandRequestData): Promise<RestFulResponse<T>> {
 		const _id = uuidv4();
+		const _ = await this.awaitForConnection()
 
 		return new Promise<RestFulResponse<T>>((resolve, reject) => {
 			if (this.ws?.readyState !== WebSocket.OPEN) {

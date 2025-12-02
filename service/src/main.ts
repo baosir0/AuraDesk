@@ -3,6 +3,9 @@ import { browserAdapter } from './hook/browserAdapter';
 import { WebSocketMessage } from './hook/adapter.dto';
 import { routeMessage } from './common/route';
 import './llm/llm.controller'
+import './mcp/client.controller'
+import './mcp/connect.controller'
+
 const wss = new WebSocketServer({port:1234})
 console.log("Mcp服务已启动")
 wss.on('connection', (ws) => {

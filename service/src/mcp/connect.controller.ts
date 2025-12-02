@@ -1,7 +1,7 @@
-import { Controller } from "src/common";
-import { PostMessageble } from "src/hook/adapter.dto";
 import { connectService, disconnectService } from "./connect.service";
-import { RequestData, RestfulResponse } from "src/common/index.dto";
+import { Controller } from '../common/index';
+import { PostMessageble } from '../hook/adapter.dto';
+import { RequestData, RestfulResponse } from '../common/index.dto';
 
 export class  ConnectController {
     @Controller('connect')

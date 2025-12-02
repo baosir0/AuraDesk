@@ -7,6 +7,7 @@ export async function routeMessage(command: string, data: any, webview: PostMess
         const {handler, option = {}} = handlerstore
         try{
             const res = await handler(data, webview)
+            webview.postMessage(res)
         }catch (error){
             return
         }

@@ -19,6 +19,7 @@ export interface MessagesState {
     messages: Message[]; 
     tools: Tools 
     clientId: string
+    temp: number
     isConnected: boolean
     options: McpOptions
 }
@@ -29,9 +30,10 @@ export const useMessageStore = defineStore('messageStore',{
         tools: [],
         clientId: '',
         isConnected: false,
+        temp: 0,
         options: {
-            command: 'run',
-            args: ['run', 'server.py']
+            command: 'mcp',
+            args: ['run', `${process.env.VUE_APP_SERVER_PATH}`]
         }
     }),
 
@@ -94,9 +96,18 @@ export const useMessageStore = defineStore('messageStore',{
                 if(res.code == 200) {
                     this.isConnected = true
                     this.clientId = res.msg.clientId
+                    this.temp = 0
                 }
             }catch(error) {
-                console.log('服务器连接失败')
+                if(this.temp < 5){
+                    console.log('服务器连接失败,正在重试')
+                    setTimeout(()=>{},1000)
+                    this.temp += 1
+                    await this.connectToServer()
+                }else{
+                    console.log('已达最大重试次数，服务器连接失败')
+                }
+                
             }
         }
     }
